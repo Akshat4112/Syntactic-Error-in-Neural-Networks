@@ -35,6 +35,16 @@ class training_model:
         print(f'Device Name: {torch.cuda.get_device_name()}')
 
     def prepare_training(self):
+        """
+         Reads training and test data from CSV files, tokenizes the text data,
+         trains a Word2Vec model on the tokenized data, and prepares the training
+         and testing datasets for a machine learning model.
+         Parameters:
+         None
+         Returns:
+         None
+         """
+
         self.df_train = pd.read_csv('../data/train_df.csv')
         self.df_test = pd.read_csv('../data/test_df.csv')
         tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
@@ -86,6 +96,16 @@ class training_model:
         self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(pad, Y, test_size=0.20, random_state=42)
 
     def train_rnn(self):
+        pass
+
+    def train_lstm(self):
+        """
+        Trains an LSTM model for text classification.
+        Parameters:
+            None
+        Returns:
+            None
+        """
         model = Sequential()
         model.add(Embedding(input_dim=self.vocab_size, output_dim=self.embedding_dim, input_length=self.max_len,
                             embeddings_initializer=Constant(self.embed_matrix)))
@@ -118,6 +138,12 @@ class training_model:
         plt.show("../figures/model_accuracy_RNN.png")
 
     def train_bert(self):
+        """
+        Trains a BERT model on the provided training data.
+
+        Returns:
+            None
+        """
         # logging.basicConfig(level=logging.INFO)
         # transformers_logger = logging.getLogger("transformers")
         # transformers_logger.setLevel(logging.WARNING)
@@ -140,6 +166,10 @@ class training_model:
         recall = result['tp'] / (result['tp'] + result['fn'])
         f1_score = 2 * (precision * recall) / (precision + recall)
         print(precision, recall, f1_score)
+
+        model.model.save_pretrained('../models/bert-finetuned')
+        model.tokenizer.save_pretrained('../models/bert-finetuned')
+        model.config.save_pretrained('../models/bert-finetuned/')
 
     def train_roberta(self):
         sample_df = self.df_train[1000:1500]

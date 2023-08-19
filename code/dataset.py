@@ -13,6 +13,15 @@ class dataset:
         # df = pd.read_csv(io.StringIO(download.decode('utf-8')), sep='\t')
         # os.system("wget http://tallinzen.net/media/rnn_agreement/rnn_agr_simple.tar.gz")
 
+    """
+    Preprocesses the data by reading the training and validation datasets from CSV files,
+    cleaning the text in the "Preamble" column, converting the "POS" column values from strings
+    to binary values, and saving the preprocessed data to new CSV files.
+    Parameters:
+    None
+    Returns:
+    None
+    """
     def preprocess_data(self):
         df_train = pd.read_csv('../data/rnn_agr_simple/numpred.train', sep='\t', names=['POS', "Preamble"])
         df_val = pd.read_csv('../data/rnn_agr_simple/numpred.val', sep='\t', names=['POS', "Preamble"])
