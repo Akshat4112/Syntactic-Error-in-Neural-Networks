@@ -124,7 +124,7 @@ validators==0.21.2
 wandb==0.15.8
 watchdog==3.0.0
 werkzeug==2.3.7
-wheel==0.36.2
+wheel==0.38.1
 wrapt==1.15.0
 xxhash==3.3.0
 yarl==1.9.2
