@@ -34,6 +34,9 @@ class training_model:
         print(f'Available GPU devices for Torch: {torch.cuda.device_count()}')
         print(f'Device Name: {torch.cuda.get_device_name()}')
 
+        self.df_train = pd.read_csv('../data/train_df.csv')
+        self.df_test = pd.read_csv('../data/test_df.csv')
+
     def prepare_training(self):
         """
          Reads training and test data from CSV files, tokenizes the text data,
@@ -45,8 +48,7 @@ class training_model:
          None
          """
 
-        self.df_train = pd.read_csv('../data/train_df.csv')
-        self.df_test = pd.read_csv('../data/test_df.csv')
+
         tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
         sentences = []
@@ -152,7 +154,7 @@ class training_model:
         eval_df = self.df_train[:1000]
         print(sample_df.head())
 
-        model_args = ClassificationArgs(num_train_epochs=10, overwrite_output_dir=True, train_batch_size=16,
+        model_args = ClassificationArgs(num_train_epochs=10, overwrite_output_dir=True, train_batch_size=1,
                                         evaluate_during_training=True)
         model = ClassificationModel("bert", "bert-base-cased", args=model_args, num_labels=2)
 

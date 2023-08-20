@@ -6,7 +6,7 @@ from train import training_model
 # data_obj.preprocess_data()
 
 train_obj = training_model()
-train_obj.prepare_training()
+# train_obj.prepare_training()
 
 # train_obj.train_rnn()
 # train_obj.train_lstm()
