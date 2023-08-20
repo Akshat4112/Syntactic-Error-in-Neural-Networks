@@ -3,9 +3,12 @@ import io
 import requests
 import os
 import pandas as pd
+
+
 class dataset:
     def __init__(self):
         pass
+
     def download_data(self):
         pass
         # URL = "https://raw.githubusercontent.com/TalLinzen/rnn_agreement/master/data/wiki.vocab"
@@ -22,14 +25,15 @@ class dataset:
     Returns:
     None
     """
+
     def preprocess_data(self):
         df_train = pd.read_csv('../data/rnn_agr_simple/numpred.train', sep='\t', names=['POS', "Preamble"])
         df_val = pd.read_csv('../data/rnn_agr_simple/numpred.val', sep='\t', names=['POS', "Preamble"])
 
-        df_train["Preamble"] = df_train["Preamble"].apply(lambda s: ' '.join(re.sub("[.(),``!?:;-='...@_]", " ", s).split()))
+        df_train["Preamble"] = df_train["Preamble"].apply(
+            lambda s: ' '.join(re.sub("[.(),``!?:;-='...@_]", " ", s).split()))
         df_val["Preamble"] = df_val["Preamble"].apply(
             lambda s: ' '.join(re.sub("[.(),``!?:;-='...@_]", " ", s).split()))
-
 
         # VBZ is singular and VBP is plural
         df_train.loc[df_train["POS"] == "VBZ", "POS"] = 0
@@ -50,7 +54,3 @@ class dataset:
         test_df.to_csv('../data/test_df.csv')
 
         print("Data Preprocessed and Saved...")
-
-
-
-

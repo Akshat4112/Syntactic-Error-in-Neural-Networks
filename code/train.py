@@ -8,10 +8,10 @@ from gensim.models import Word2Vec
 
 import keras
 import tensorflow
-from keras.preprocessing.text import one_hot,Tokenizer
+from keras.preprocessing.text import one_hot, Tokenizer
 from keras.utils import pad_sequences
 from keras.models import Sequential
-from keras.layers import Dense , Flatten ,Embedding,Input,LSTM
+from keras.layers import Dense, Flatten, Embedding, Input, LSTM
 from keras.models import Model
 from keras.preprocessing.text import text_to_word_sequence
 from sklearn.model_selection import train_test_split
@@ -20,11 +20,13 @@ from keras.initializers import Constant
 from keras.layers import ReLU
 from keras.layers import Dropout
 import tensorflow as tf
+
 tensorflow.random.set_seed(7)
 
 from simpletransformers.classification import ClassificationModel, ClassificationArgs
 import torch
 import logging
+
 
 class training_model:
     def __init__(self):
@@ -47,7 +49,6 @@ class training_model:
          Returns:
          None
          """
-
 
         tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
@@ -150,15 +151,16 @@ class training_model:
         # transformers_logger = logging.getLogger("transformers")
         # transformers_logger.setLevel(logging.WARNING)
 
-        sample_df = self.df_train[1000:1500]
+        sample_df = self.df_train[:100]
         eval_df = self.df_train[:1000]
         print(sample_df.head())
 
-        model_args = ClassificationArgs(num_train_epochs=10, overwrite_output_dir=True, train_batch_size=1,
+        model_args = ClassificationArgs(num_train_epochs=10, overwrite_output_dir=True, train_batch_size=16,
                                         evaluate_during_training=True)
         model = ClassificationModel("bert", "bert-base-cased", args=model_args, num_labels=2)
 
-        model.train_model(train_df = sample_df, eval_df=eval_df, show_running_loss=True, acc=sklearn.metrics.accuracy_score)
+        model.train_model(train_df=sample_df, eval_df=eval_df, show_running_loss=True,
+                          acc=sklearn.metrics.accuracy_score)
 
         test_sample_df = self.df_train.sample(n=100)
         # Evaluate the model
@@ -179,7 +181,9 @@ class training_model:
         print(sample_df.head())
 
         model_args = ClassificationArgs(num_train_epochs=10, overwrite_output_dir=True, train_batch_size=16,
-                                        evaluate_during_training=True)
+                                        evaluate_during_training=True, use_multiprocessing=False, use_multiprocessing_for_evaluation=False)
+
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
         model = ClassificationModel("roberta", "roberta-base", args=model_args, num_labels=2)
 
         model.train_model(train_df=sample_df, eval_df=eval_df, show_running_loss=True,
@@ -197,4 +201,3 @@ class training_model:
 
     def train_gpt2(self):
         pass
-

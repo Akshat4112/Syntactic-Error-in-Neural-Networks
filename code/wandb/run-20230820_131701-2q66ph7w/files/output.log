@@ -1,0 +1,30 @@
+
+  0%|                                                                                                                                                                                                        | 0/42 [00:00<?, ?it/s]/mount/projekte50/projekte/semrel/Models/Abstractness-Concreteness/Tarun/tarunA/synenv/lib64/python3.10/site-packages/torch/nn/parallel/_functions.py:68: UserWarning: Was asked to gather along dimension 0, but all input tensors were scalars; will instead unsqueeze and return a vector.
+  warnings.warn('Was asked to gather along dimension 0, but all '
+
+
+
+
+
+
+ 33%|███████████████████████████████████████████████████████████████▋                                                                                                                               | 14/42 [00:36<00:31,  1.12s/it]
+
+
+  warnings.warn('Was asked to gather along dimension 0, but all '
+ 36%|████████████████████████████████████████████████████████████████████▏                                                                                                                          | 15/42 [00:43<01:23,  3.08s/it]
+
+
+
+ 67%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▎                                                               | 28/42 [00:49<00:06,  2.24it/s]
+
+ 43%|██████████████████████████████████████████████████████████████████████████████████▎                                                                                                             | 6/14 [00:01<00:02,  3.61it/s]
+ 67%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▎                                                               | 28/42 [00:53<00:06,  2.24it/s]/mount/projekte50/projekte/semrel/Models/Abstractness-Concreteness/Tarun/tarunA/synenv/lib64/python3.10/site-packages/torch/nn/parallel/_functions.py:68: UserWarning: Was asked to gather along dimension 0, but all input tensors were scalars; will instead unsqueeze and return a vector.
+  warnings.warn('Was asked to gather along dimension 0, but all '
+
+
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 42/42 [01:00<00:00,  2.15it/s]
+
+ 93%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▎             | 13/14 [00:03<00:00,  3.18it/s]
+{'eval_loss': 1.186007022857666, 'eval_accuracy': 0.508, 'eval_runtime': 3.9674, 'eval_samples_per_second': 252.057, 'eval_steps_per_second': 3.529, 'epoch': 3.0}
+
+{'train_runtime': 66.2593, 'train_samples_per_second': 45.277, 'train_steps_per_second': 0.634, 'train_loss': 1.4039320264543806, 'epoch': 3.0}
