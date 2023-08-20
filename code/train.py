@@ -7,6 +7,8 @@ import gensim
 from gensim.models import Word2Vec
 
 import keras
+import mlflow
+import mlflow.keras
 import tensorflow
 from keras.preprocessing.text import one_hot, Tokenizer
 from keras.utils import pad_sequences
@@ -27,6 +29,17 @@ from simpletransformers.classification import ClassificationModel, Classificatio
 import torch
 import logging
 
+from transformers import AutoTokenizer, pipeline
+from datasets import load_dataset
+from datasets import Dataset, concatenate_datasets
+from transformers import AutoTokenizer
+from transformers import TrainingArguments, Trainer
+from transformers import AutoModelForSequenceClassification
+from transformers import TrainingArguments
+import evaluate
+import datasets
+import os
+os.environ["WANDB_DISABLED"] = "true"
 
 class training_model:
     def __init__(self):
@@ -35,6 +48,9 @@ class training_model:
         print(f'CUDNN version: {torch.backends.cudnn.version()}')
         print(f'Available GPU devices for Torch: {torch.cuda.device_count()}')
         print(f'Device Name: {torch.cuda.get_device_name()}')
+
+        mlflow.set_tracking_uri("sqlite:///../experiment_tracking/mlflow.db")
+        mlflow.set_experiment("bert_full_data_training")
 
         self.df_train = pd.read_csv('../data/train_df.csv')
         self.df_test = pd.read_csv('../data/test_df.csv')
@@ -121,7 +137,11 @@ class training_model:
         model.add(Dense(2, activation='sigmoid'))
 
         model.compile(optimizer=keras.optimizers.RMSprop(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+        mlflow.keras.autolog(log_models=True)
         History = model.fit(self.x_train, self.y_train, epochs=20, batch_size=64, validation_split=0.2)
+
+        with mlflow.start_run() as run:
+            mlflow.keras.log_model(model, "models")
 
         model.save("../models/model_LSTM.h5")
         plt.plot(History.history['loss'])
@@ -174,6 +194,48 @@ class training_model:
         model.model.save_pretrained('../models/bert-finetuned')
         model.tokenizer.save_pretrained('../models/bert-finetuned')
         model.config.save_pretrained('../models/bert-finetuned/')
+
+    def tokenize_function(self, examples):
+        return tokenizer(examples["text"], padding="max_length", truncation=True)
+
+    def compute_metrics(self, eval_pred):
+        logits, labels = eval_pred
+        predictions = np.argmax(logits, axis=-1)
+        return metric.compute(predictions=predictions, references=labels)
+
+    def train_bert_hugging_face(self):
+        ds_train = Dataset.from_pandas(self.df_train)
+        ds_test = Dataset.from_pandas(self.df_test)
+        dataset = datasets.DatasetDict({"train": ds_train, "test": ds_test})
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        tokenized_datasets = dataset.map(self.tokenize_function, batched=True)
+        split_train_dataset = tokenized_datasets["train"].train_test_split(test_size=0.2)
+
+        train_dataset = split_train_dataset["train"]
+        eval_dataset = split_train_dataset["test"]
+        test_dataset = tokenized_datasets["test"]
+        with mlflow.start_run(run_name='bert_experiment'):
+            model = AutoModelForSequenceClassification.from_pretrained("bert-base-cased", num_labels=2)
+            metric = evaluate.load("accuracy")
+            training_args = TrainingArguments(output_dir="test_trainer", evaluation_strategy="epoch", report_to=None,
+                                              num_train_epochs=10)
+            trainer = Trainer(
+                model=model,
+                args=training_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                tokenizer=tokenizer,
+                compute_metrics=self.compute_metrics, )
+
+            trainer.train()
+            mlflow.transformers.log_model(
+                transformers_model=model,
+                artifact_path="../models/bert_model",
+            )
+            trainer.save_model("../models/training_model_bert_full_data")
+
+            predictions = trainer.predict(test_dataset)
+
 
     def train_roberta(self):
         sample_df = self.df_train[1000:1500]
