@@ -1,45 +1,30 @@
-import matplotlib.pyplot as plt
-import nltk
-import pandas as pd
-import numpy as np
-import sklearn
-import gensim
-from gensim.models import Word2Vec
+import os
 
-import keras
+import datasets
+import evaluate
+import gensim
+import matplotlib.pyplot as plt
 import mlflow
 import mlflow.keras
-import tensorflow
-from keras.preprocessing.text import one_hot, Tokenizer
-from keras.utils import pad_sequences
-from keras.models import Sequential
-from keras.layers import Dense, Flatten, Embedding, Input, LSTM
-from keras.models import Model
-from keras.preprocessing.text import text_to_word_sequence
-from sklearn.model_selection import train_test_split
-
-from keras.initializers import Constant
-from keras.layers import ReLU
-from keras.layers import Dropout
+import nltk
+import numpy as np
+import pandas as pd
 import tensorflow as tf
-
-tensorflow.random.set_seed(7)
-
-from simpletransformers.classification import ClassificationModel, ClassificationArgs
 import torch
-import logging
+from datasets import Dataset
+from gensim.models import Word2Vec
+from keras.initializers import Constant
+from keras.layers import Dense, Flatten, Embedding, LSTM, Dropout
+from keras.models import Sequential
+from keras.optimizers import RMSprop
+from keras.preprocessing.text import Tokenizer
+from keras.utils import pad_sequences, to_categorical
+from sklearn.model_selection import train_test_split
+from transformers import TrainingArguments, AutoModelForSequenceClassification, Trainer, AutoTokenizer
 
-from transformers import AutoTokenizer, pipeline
-from datasets import load_dataset
-from datasets import Dataset, concatenate_datasets
-from transformers import AutoTokenizer
-from transformers import TrainingArguments, Trainer
-from transformers import AutoModelForSequenceClassification
-from transformers import TrainingArguments
-import evaluate
-import datasets
-import os
+tf.random.set_seed(7)
 os.environ["WANDB_DISABLED"] = "true"
+
 
 class training_model:
     def __init__(self):
@@ -111,7 +96,7 @@ class training_model:
             if vector is not None:
                 self.embed_matrix[i] = vector
 
-        Y = keras.utils.to_categorical(self.df_train['labels'])
+        Y = to_categorical(self.df_train['labels'])
         self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(pad, Y, test_size=0.20, random_state=42)
 
     def train_rnn(self):
@@ -136,64 +121,35 @@ class training_model:
         model.add(Dropout(0.20))
         model.add(Dense(2, activation='sigmoid'))
 
-        model.compile(optimizer=keras.optimizers.RMSprop(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+        model.compile(optimizer=RMSprop(learning_rate=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
         mlflow.keras.autolog(log_models=True)
-        History = model.fit(self.x_train, self.y_train, epochs=20, batch_size=64, validation_split=0.2)
+        History = model.fit(self.x_train, self.y_train, epochs=2, batch_size=64, validation_split=0.2)
 
         with mlflow.start_run() as run:
             mlflow.keras.log_model(model, "models")
 
-        model.save("../models/model_LSTM.h5")
+        # saving trained LSTM model
+        model.save("../models/LSTM_model.keras")
+
+        # Plot training & validation accuracy and loss curves
+        plt.figure()
         plt.plot(History.history['loss'])
         plt.plot(History.history['val_loss'])
         plt.title('model loss')
         plt.ylabel('loss')
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')
-        plt.savefig("../figures/model_loss_RNN.png")
+        plt.savefig("../figures/model_loss_LSTM.png")
 
+        plt.figure()
         plt.plot(History.history['accuracy'])
         plt.plot(History.history['val_accuracy'])
-        plt.title('model loss')
-        plt.ylabel('loss')
+        plt.title('model accuracy')
+        plt.ylabel('accuracy')
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')
-        plt.show("../figures/model_accuracy_RNN.png")
-
-    def train_bert(self):
-        """
-        Trains a BERT model on the provided training data.
-
-        Returns:
-            None
-        """
-        # logging.basicConfig(level=logging.INFO)
-        # transformers_logger = logging.getLogger("transformers")
-        # transformers_logger.setLevel(logging.WARNING)
-
-        sample_df = self.df_train[:100]
-        eval_df = self.df_train[:1000]
-        print(sample_df.head())
-
-        model_args = ClassificationArgs(num_train_epochs=10, overwrite_output_dir=True, train_batch_size=16,
-                                        evaluate_during_training=True)
-        model = ClassificationModel("bert", "bert-base-cased", args=model_args, num_labels=2)
-
-        model.train_model(train_df=sample_df, eval_df=eval_df, show_running_loss=True,
-                          acc=sklearn.metrics.accuracy_score)
-
-        test_sample_df = self.df_train.sample(n=100)
-        # Evaluate the model
-        result, model_outputs, wrong_predictions = model.eval_model(test_sample_df)
-        print(result)
-        precision = result['tp'] / (result['tp'] + result['fp'])
-        recall = result['tp'] / (result['tp'] + result['fn'])
-        f1_score = 2 * (precision * recall) / (precision + recall)
-        print(precision, recall, f1_score)
-
-        model.model.save_pretrained('../models/bert-finetuned')
-        model.tokenizer.save_pretrained('../models/bert-finetuned')
-        model.config.save_pretrained('../models/bert-finetuned/')
+        plt.savefig("../figures/model_accuracy_LSTM.png")
+        print("Figures saved successfully")
 
     def tokenize_function(self, examples):
         return tokenizer(examples["text"], padding="max_length", truncation=True)
@@ -217,49 +173,12 @@ class training_model:
         with mlflow.start_run(run_name='bert_experiment'):
             model = AutoModelForSequenceClassification.from_pretrained("bert-base-cased", num_labels=2)
             metric = evaluate.load("accuracy")
-            training_args = TrainingArguments(output_dir="test_trainer", evaluation_strategy="epoch", report_to=None,
+            training_args = TrainingArguments(output_dir="../models/test_trainer", evaluation_strategy="epoch", report_to=None,
                                               num_train_epochs=10)
-            trainer = Trainer(
-                model=model,
-                args=training_args,
-                train_dataset=train_dataset,
-                eval_dataset=eval_dataset,
-                tokenizer=tokenizer,
-                compute_metrics=self.compute_metrics, )
+            trainer = Trainer(model=model, args=training_args, train_dataset=train_dataset, eval_dataset=eval_dataset,
+                tokenizer=tokenizer, compute_metrics=self.compute_metrics, )
 
             trainer.train()
-            mlflow.transformers.log_model(
-                transformers_model=model,
-                artifact_path="../models/bert_model",
-            )
+            mlflow.transformers.log_model(transformers_model=model, artifact_path="../models/bert_model", )
             trainer.save_model("../models/training_model_bert_full_data")
-
             predictions = trainer.predict(test_dataset)
-
-
-    def train_roberta(self):
-        sample_df = self.df_train[1000:1500]
-        eval_df = self.df_train[:1000]
-        print(sample_df.head())
-
-        model_args = ClassificationArgs(num_train_epochs=10, overwrite_output_dir=True, train_batch_size=16,
-                                        evaluate_during_training=True, use_multiprocessing=False, use_multiprocessing_for_evaluation=False)
-
-        os.environ["TOKENIZERS_PARALLELISM"] = "false"
-        model = ClassificationModel("roberta", "roberta-base", args=model_args, num_labels=2)
-
-        model.train_model(train_df=sample_df, eval_df=eval_df, show_running_loss=True,
-                          acc=sklearn.metrics.accuracy_score)
-
-        test_sample_df = self.df_train.sample(n=100)
-        # Evaluate the model
-        result, model_outputs, wrong_predictions = model.eval_model(test_sample_df)
-        print(result)
-        precision = result['tp'] / (result['tp'] + result['fp'])
-        recall = result['tp'] / (result['tp'] + result['fn'])
-        f1_score = 2 * (precision * recall) / (precision + recall)
-        print(precision, recall, f1_score)
-        pass
-
-    def train_gpt2(self):
-        pass
